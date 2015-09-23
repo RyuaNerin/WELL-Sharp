@@ -1,0 +1,79 @@
+/* ***************************************************************************** */
+/* Copyright:      Francois Panneton and Pierre L'Ecuyer, University of Montreal */
+/*                 Makoto Matsumoto, Hiroshima University                        */
+/* Notice:         This code can be used freely for personal, academic,          */
+/*                 or non-commercial purposes. For commercial purposes,          */
+/*                 please contact P. L'Ecuyer at: lecuyer@iro.UMontreal.ca       */
+/* ***************************************************************************** */
+
+using System;
+using System.Runtime.InteropServices;
+
+namespace RandomAlgorithms.WELL
+{
+	[Serializable]
+	[ComVisible(true)]
+	public class WELL512a : Random
+	{
+		private static double FACT = 2.32830643653869628906e-10;
+		private uint	m_i;
+		private uint[]	m_state = new uint[16];
+		private uint	m_z0;
+		private uint	m_z1;
+		private uint	m_z2;
+		
+		public WELL512a() : this(DateTime.Now.Millisecond)
+		{ }
+		public WELL512a(int seed)
+		{
+			var rnd = new Random(seed);
+			for (int i = 0; i < 16; ++i)
+				 m_state[i] = unchecked((uint)rnd.Next());
+		}
+		public WELL512a(uint[] seed) : base()
+		{
+			if (seed == null)
+				throw new ArgumentNullException("The seed must not be null.");
+			if (seed.Length != 16)
+				throw new ArgumentException("Length of seed must be 16.");
+
+			for (int i = 0; i < 16; ++i)
+				 m_state[i] = seed[i];
+		}
+
+		protected override double Sample()
+		{
+			 m_z0 = m_state[( m_i + 15) & 0xF];
+			 m_z1 = MAT0NEG(-16,  m_state[ m_i]) ^ MAT0NEG(-15,  m_state[( m_i + 13) & 0xF]);
+			 m_z2 = MAT0POS(11,  m_state[( m_i + 9) & 0xF]);
+
+			 m_state[ m_i] =  m_z1 ^  m_z2;
+			 m_state[( m_i + 15) & 0xF] =
+				MAT0NEG(-2,  m_z0) ^
+				MAT0NEG(-18,  m_z1) ^
+				MAT3NEG(-28,  m_z2) ^
+				MAT4NEG(-5, 0xDA442D24, m_state[ m_i]);
+
+			 m_i = ( m_i + 15) & 0xF;
+
+			return (double)m_state[ m_i] * FACT;
+		}
+
+		private static uint MAT0POS(int t, uint v)
+		{
+			return v ^ (v >> t);
+		}
+		private static uint MAT0NEG(int t, uint v)
+		{
+			return v ^ (v << -t);
+		}
+		private static uint MAT3NEG(int t, uint v)
+		{
+			return v << -t;
+		}
+		private static uint MAT4NEG(int t, uint b, uint v)
+		{
+			return v ^ ((v << -t) & b);
+		}
+	}
+}
